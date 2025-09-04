@@ -1,6 +1,6 @@
-# Linguagem Simples de Dados (SDL) – Especificação Semana 3
+# Linguagem Simples de Dados (LSD) – Especificação Semana 3
 
-## ✔ 1. Especificação Formal do Alfabeto (Σ)
+## 1. Especificação Formal do Alfabeto (Σ)
 
 O alfabeto da SDL é baseado em um subconjunto simplificado do alfabeto latino, dígitos decimais e símbolos especiais necessários para operações básicas.
 
@@ -17,7 +17,7 @@ O alfabeto da SDL é baseado em um subconjunto simplificado do alfabeto latino, 
 
 ---
 
-## ✔ 2. Definição Formal de Todos os Tokens
+## 2. Definição Formal de Todos os Tokens
 
 Tokens são elementos léxicos da linguagem. Abaixo estão as definições formais com **regex compatível com Python**, exemplos e comentários.
 
@@ -34,7 +34,7 @@ Tokens são elementos léxicos da linguagem. Abaixo estão as definições forma
 
 ---
 
-## ✔ 3. Exemplos de Programas Válidos
+## 3. Exemplos de Programas Válidos
 
 ### Exemplo 1 – Cálculo de média simples
 ```python
@@ -68,7 +68,7 @@ End
 
 ```
 
-## ✔ 4. Registro de Projeto com Decisões de Design e Justificativas
+## 4. Registro de Projeto com Decisões de Design e Justificativas
 
 ### Sensibilidade a maiúsculas/minúsculas
 - Palavras-chave são **case-insensitive** (`If` == `if`).  
@@ -93,8 +93,6 @@ End
 - Minimizar a complexidade da sintaxe para iniciantes.  
 - Restringir recursos aos essenciais para facilitar o parsing.  
 - Definição de tokens já prepara o terreno para **extensões futuras** (condições, loops, expressões mais complexas).  
-
-
 
 
 
