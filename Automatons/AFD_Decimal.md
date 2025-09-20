@@ -1,4 +1,4 @@
-%%{ init: { "layout": "elk" } }%%
+```mermaid
 
 stateDiagram-v2
     [*] --> q0
@@ -8,3 +8,4 @@ stateDiagram-v2
     q2 --> q3 : dígito
     q3 --> q3 : dígito
     q3 --> [*]
+```
