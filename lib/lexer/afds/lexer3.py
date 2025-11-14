@@ -1,7 +1,7 @@
-from AFN import dfa  # importa o DFA pronto
-from AFN import dfa_rev
+# --- lexer3_adaptado.py ---
+from AFN import dfa, dfa_rev  # mantém compatibilidade
+from typing import Optional
 
-# --- estruturas simples ---
 class Token:
     def __init__(self, tipo, lexema, linha, coluna):
         self.type = tipo
@@ -13,7 +13,7 @@ class Token:
         return f"Token({self.type!r}, {self.lexeme!r}, line={self.line}, col={self.col})"
 
 class InputBuffer:
-    def __init__(self, texto):
+    def __init__(self, texto: str):
         self.texto = texto
         self.pos = 0
         self.len = len(texto)
@@ -41,25 +41,34 @@ class InputBuffer:
     def index(self):
         return self.pos
 
-# --- Lexer ---
 class Lexer:
-    def __init__(self, palavras_chave=None):
-        # DFA importado
-        self.dfa = dfa
+    def __init__(self, palavras_chave=None, dfa_obj=None, ignorar_whitespace=True):
+        # permite passar dfa explicitamente (ou usa importado)
+        self.dfa = dfa_obj if dfa_obj is not None else dfa
         self.dfa_rev = dfa_rev
 
-        # palavras-chave armazenadas em lowercase para case-insensitive
+        # validar formato mínimo do DFA e dar mensagens úteis
+        self._validate_dfa_shape()
+
         raw_kws = palavras_chave or ["If", "Print", "CalculateMean", "CalculateSum", "End"]
         self.palavras_chave = set(k.lower() for k in raw_kws)
 
-        self.ignorar_whitespace = True
+        self.ignorar_whitespace = ignorar_whitespace
         self.whitespace_chars = set(" \t\r\n")
 
-        # caracteres que podem iniciar operadores/atribuição (para heurística, opcional)
+        # heurísticas opcionais
         self.operator_start_chars = set("+-*/%=!<>&|^:.?")
-
-        # tipos considerados operacionais para regra composta (se precisar)
         self.operator_types = {"OPERADOR", "ATRIBUICAO"}
+
+    def _validate_dfa_shape(self):
+        # checagens leves para dar mensagens claras
+        missing = []
+        for attr in ("inicial", "finais", "transicoes", "token_finals"):
+            if not hasattr(self.dfa, attr):
+                missing.append(attr)
+        if missing:
+            raise ValueError(f"DFA fornecido está incompleto — faltando atributos: {missing}. "
+                             "O DFA deve ter 'inicial', 'finais', 'transicoes', 'token_finals'.")
 
     def _pos_from_index(self, texto, index):
         linha = texto.count("\n", 0, index) + 1
@@ -67,20 +76,27 @@ class Lexer:
         col = index - ultimo_n if ultimo_n != -1 else index + 1
         return linha, col
 
-    # percorre DFA consumindo chars a partir do índice start e retorna (tamanho, ultimo_final_state)
     def _longest_match_from(self, texto, start):
+        """
+        Percorre transições do DFA consumindo caractere a caractere.
+        Retorna (tamanho_do_lexema, estado_final_ultimo_reconhecido)
+        """
         estado = self.dfa.inicial
         ultimo_final = None
         tamanho = 0
         j = start
         n = len(texto)
-        # enquanto houver transição para o próximo caractere
+
+        # Se o DFA usar transições com chaves não-exatas, este método
+        # precisa ser alinhado com a representação do seu DFA.
         while j < n:
             c = texto[j]
             trans_row = self.dfa.transicoes.get(estado)
             if not trans_row:
                 break
-            # transições no seu DFA são indexadas por símbolo exato (assumindo single-char symbols)
+
+            # trans_row é esperado como dict: símbolo_char -> próximo_estado
+            # se seu DFA usa classes (ex: 'DIGIT') você pode adaptar aqui
             if c not in trans_row:
                 break
             estado = trans_row[c]
@@ -90,12 +106,11 @@ class Lexer:
                 tamanho = j - start
         return tamanho, ultimo_final
 
-    # next_token: interface para parser
-    def next_token(self, buffer):
+    def next_token(self, buffer: InputBuffer):
         texto = buffer.texto
         n = buffer.len
 
-        # avançar sobre whitespace se necessário
+        # consumir whitespace
         while not buffer.at_end() and self.ignorar_whitespace and buffer.peek() in self.whitespace_chars:
             buffer.next()
 
@@ -106,10 +121,9 @@ class Lexer:
         tamanho, ultimo_final = self._longest_match_from(texto, i)
 
         if ultimo_final is None or tamanho == 0:
-            # erro léxico: consumir até próximo whitespace ou caractere reconhecível minimamente
+            # erro léxico: avançar minimamente para evitar loop infinito
             k = i + 1
             while k < n and texto[k] not in self.whitespace_chars:
-                # tentativa simples: se um próximo prefixo for reconhecível, parar antes dele
                 look_t, look_f = self._longest_match_from(texto, k)
                 if look_f is not None:
                     break
@@ -128,48 +142,61 @@ class Lexer:
             buffer.advance(max(1, k - i))
             return None, erro
 
-        # temos um match; extrai lexema e tipo
         lexema = texto[i:i+tamanho]
         ultimo_final_state = ultimo_final
+        # depois de obter lexema e token_type do DFA:
         token_type = self.dfa.token_finals.get(ultimo_final_state, "UNKNOWN")
+        if token_type == "IDENTIFIER" and lexema.lower() in self.palavras_chave:
+            # usar nome do keyword como token type (preserva qual keyword)
+            tipo_final = lexema  # ou lexema.capitalize() / lexema.upper() conforme sua convenção
+        else:
+            tipo_final = token_type
 
-        # palavras-chave case-insensitive
+
         tipo_final = "KEYWORD" if lexema.lower() in self.palavras_chave else token_type
-
-        # posição linha/coluna
         linha, col = self._pos_from_index(texto, i)
-
-        # avança buffer
         buffer.advance(tamanho)
 
         tok = Token(tipo_final, lexema, linha, col)
         return tok, None
 
-    # tokenizer que retorna listas (útil para testes)
     def tokenize(self, texto):
         buffer = InputBuffer(texto)
         tokens = []
         erros = []
+        safety_counter = 0
+        max_steps = max(1000000, len(texto) * 20)  # evita loops infinitos
+
         while True:
+            safety_counter += 1
+            if safety_counter > max_steps:
+                raise RuntimeError("Tokenization exceeded maximum steps — possível loop infinito.")
+
             tok, err = self.next_token(buffer)
             if err:
                 erros.append(err)
-                continue
+                # continue (já avançamos no buffer em caso de erro)
+                if buffer.at_end():
+                    break
+                else:
+                    continue
             if tok is None:
-                # caso safety, seguir
-                continue
+                # segurança: se None e não erro, avança 1 char para não travar
+                if not buffer.at_end():
+                    buffer.advance(1)
+                    continue
+                else:
+                    break
             if tok.type == "EOF":
                 tokens.append(tok)
                 break
-            # ignorar comentários e separadores no output, se desejado
-            if tok.type == "COMENTARIO":
-                continue
-            if tok.type == "SEPARADOR":
+            # filtragem opcional (quem chama decide se quer filtrar)
+            if tok.type in ("COMENTARIO", "SEPARADOR"):
                 continue
             tokens.append(tok)
         return tokens, erros
 
-# --- Teste rápido ---
+# fim lexer3_adaptado.py
 if __name__ == "__main__":
     src = '''
         If x = 10
