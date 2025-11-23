@@ -1,0 +1,9 @@
+x = 10
+y = 20
+z = x + y
+Print "Soma de x e y:"
+Print z
+resultado = z * 2
+Print "Resultado (x2):"
+Print resultado
+

@@ -16,6 +16,7 @@ from .lsd_ast import (
 )
 from .semantic_analyzer import SemanticAnalyzer, SemanticError, Type, SymbolTable
 from .interpreter import Interpreter, InterpreterError
+from .code_generator import CodeGenerator, CodeGeneratorError
 
 __all__ = [
     'Parser', 'ParseError',
@@ -24,6 +25,7 @@ __all__ = [
     'UnaryExpression', 'PrimaryExpression', 'IntegerLiteral', 'DecimalLiteral',
     'StringLiteral', 'Identifier', 'FunctionCall', 'ListExpression', 'ParenthesizedExpression',
     'SemanticAnalyzer', 'SemanticError', 'Type', 'SymbolTable',
-    'Interpreter', 'InterpreterError'
+    'Interpreter', 'InterpreterError',
+    'CodeGenerator', 'CodeGeneratorError'
 ]
 

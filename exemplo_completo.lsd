@@ -1,0 +1,27 @@
+nota1 = 8.5
+nota2 = 7.0
+nota3 = 9.0
+soma = nota1 + nota2 + nota3
+media = soma / 3
+Print "=== Sistema de Notas ==="
+Print "Nota 1:"
+Print nota1
+Print "Nota 2:"
+Print nota2
+Print "Nota 3:"
+Print nota3
+Print "Soma das notas:"
+Print soma
+Print "Media final:"
+Print media
+If media >= 7.0
+Print "Status: APROVADO"
+resultado = media * 10
+Print "Resultado (x10):"
+Print resultado
+End
+If media < 7.0
+Print "Status: REPROVADO"
+Print "Estude mais!"
+End
+

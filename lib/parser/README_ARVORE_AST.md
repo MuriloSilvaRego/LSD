@@ -348,5 +348,5 @@ print(f"{espacos}Assignment: {node.identifier} (linha {node.line})")
 ---
 
 **Criado para**: Projeto LSD - Compilador/Interpretador  
-**Última atualização**: 2024
+**Última atualização**: 2025
 
